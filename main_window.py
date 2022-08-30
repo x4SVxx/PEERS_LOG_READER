@@ -11,6 +11,7 @@ import numpy as np
 class Window(QMainWindow):
     def __init__(self):
         super(Window, self).__init__()
+        self.filenames_mas =[]
         self.all_logs_mas = []
         self.log = []
         self.zero_log = []
@@ -50,7 +51,7 @@ class Window(QMainWindow):
         self.window_y = int(self.SCREEN_HEIGHT / 2 - self.window_height / 2)
         self.setGeometry(self.window_x, self.window_y, self.window_width, self.window_height)
         self.setStyleSheet("background-color: #F3F3F3")
-        self.setWindowFlags(Qt.FramelessWindowHint)
+        # self.setWindowFlags(Qt.FramelessWindowHint)
 
     def CreateMenuBar(self):
         self.menu_bar = self.menuBar()
@@ -482,7 +483,6 @@ class Window(QMainWindow):
             self.button_slide_tools.setText(">")
             self.slide_menu_bar = False
 
-
     def CreateSlider(self):
         self.slider = QSlider(Qt.Horizontal, self)
         self.slider.setFocusPolicy(Qt.NoFocus)
@@ -493,6 +493,9 @@ class Window(QMainWindow):
         self.slider.valueChanged[int].connect(self.SliderLogic)
         self.slider.setStyleSheet("QSlider::handle:horizontal {background-color: dimgrey;}"
                                   "QSlider::handle:horizontal:pressed {background-color: black;}")
+        self.slider.setMaximum(1000)
+        self.slider.setTickInterval(1)
+        self.slider.setSingleStep(1)
 
     def CreateDateLayot(self):
         self.start_date_layot = QLabel("", self)
@@ -533,7 +536,8 @@ class Window(QMainWindow):
         self.table.resizeRowsToContents()
 
     def SliderLogic(self, value):
-        self.count = int(len(self.log) / 100 * value)
+        if int(len(self.log) / 1000 * value) >= len(self.log): self.count = len(self.log) - 1
+        else: self.count = int(len(self.log) / 1000 * value)
         self.current_time = float(self.log[self.count][0])
         self.Draw()
 
@@ -546,193 +550,201 @@ class Window(QMainWindow):
                     tag.mas_y_f[i] = float(tag.mas_y_f[i - 1] * alpha + tag.mas_y[i] * (1 - alpha))
 
     def LogLoad(self):
-        filename, filetype = QFileDialog.getOpenFileName(self, "SELECT A LOG", ".", "Text files (*.txt *.log)")
-        if filename:
-            file = open(filename, 'r')
-            line = file.readline().split()
-            for log in self.log:
-                if float(line[0]) == float(log[0]):
+        filenames, filetype = QFileDialog.getOpenFileNames(self, "SELECT A LOG", ".", "Text files (*.txt *.log)")
+        for filename in filenames:
+            if filename:
+
+                filename_cross_flag = False
+                for filen in self.filenames_mas:
+                    if filen == filename: filename_cross_flag = True
+
+                if not filename_cross_flag:
+                    self.filenames_mas.append(filename)
+
+                    file = open(filename, 'r')
+                    while True:
+                        try:
+                            line = file.readline().split()
+                            if not line: break
+                            if line[1] == "CLE:" and line[2] == "TAG" and line[4] == "0": self.zero_log.append(line)
+                        except: pass
                     file.close()
-                    return
-            file.close()
 
-            file = open(filename, 'r')
-            while True:
-                line = file.readline().split()
-                if not line: break
-                if line[1] == "CLE:" and line[2] == "TAG" and line[4] == "0": self.zero_log.append(line)
-            file.close()
+                    file = open(filename, 'r')
+                    new_log = []
+                    while True:
+                        try:
+                            line = file.readline().split()
+                            if not line: break
+                            if line[1] == "CLE:" and line[2] == "TAG" and line[4] == "1": new_log.append(line)
+                        except: pass
+                    file.close()
 
-            file = open(filename, 'r')
-            new_log = []
-            while True:
-                line = file.readline().split()
-                if not line: break
-                if line[1] == "CLE:" and line[2] == "TAG" and line[4] == "1": new_log.append(line)
-            file.close()
+                    if len(new_log) !=0:
+                        if len(self.all_logs_mas) == 0:
+                            self.all_logs_mas.append(new_log)
+                        else:
+                            write_log_flag = False
+                            for i in range(len(self.all_logs_mas)):
+                                if float(new_log[0][0]) < float(self.all_logs_mas[i][0][0]):
+                                    self.all_logs_mas.insert(i, new_log)
+                                    write_log_flag = True
+                            if not write_log_flag:
+                                self.all_logs_mas.append(new_log)
 
-            if len(self.all_logs_mas) == 0:
-                self.all_logs_mas.append(new_log)
-            else:
-                write_log_flag = False
-                for i in range(len(self.all_logs_mas)):
-                    if float(new_log[0][0]) < float(self.all_logs_mas[i][0][0]):
-                        self.all_logs_mas.insert(i, new_log)
-                        write_log_flag = True
-                if not write_log_flag:
-                    self.all_logs_mas.append(new_log)
+                    self.log = []
+                    for log in self.all_logs_mas:
+                        for i in range(len(log)):
+                            self.log.append(log[i])
 
-            self.log = []
-            for log in self.all_logs_mas:
-                for i in range(len(log)):
-                    self.log.append(log[i])
+                    self.tag_width_sliders = []
+                    self.enable_disable_checkboxes = []
+                    self.tag_path_checkboxes = []
+                    self.time_tag_path_sliders = []
+                    self.tag_tails_length_sliders = []
+                    self.tags = []
+                    self.count = 0
+                    self.slider.setValue(0)
 
-            self.tag_width_sliders = []
-            self.enable_disable_checkboxes = []
-            self.tag_path_checkboxes = []
-            self.time_tag_path_sliders = []
-            self.tag_tails_length_sliders = []
-            self.tags = []
-            self.count = 0
-            self.slider.setValue(0)
+                    for log in self.log:
+                        flag_cross_tag_name = False
+                        for tag in self.tags:
+                            if log[3] == tag.name: flag_cross_tag_name = True
+                        if not flag_cross_tag_name:
+                            new_tag = Tag(log[3], parameters.tag_color, parameters.tag_width, log[5], log[6], log[7])
+                            self.tags.append(new_tag)
 
-            for log in self.log:
-                flag_cross_tag_name = False
-                for tag in self.tags:
-                    if log[3] == tag.name: flag_cross_tag_name = True
-                if not flag_cross_tag_name:
-                    new_tag = Tag(log[3], parameters.tag_color, parameters.tag_width, log[5], log[6], log[7])
-                    self.tags.append(new_tag)
+                            add_item_flag = False
+                            for item in self.graph_widget.listDataItems():
+                                if item.name() == new_tag.name:
+                                    add_item_flag = True
+                                    item.setData([new_tag.x], [new_tag.y], pen=pg.mkPen(width=new_tag.width, color=new_tag.color), symbol='o', name=new_tag.name)
+                            if not add_item_flag:
+                                self.graph_widget.addItem(pg.ScatterPlotItem([new_tag.x], [new_tag.y], pen=pg.mkPen(width=new_tag.width, color=new_tag.color), symbol='o', name=new_tag.name))
 
-                    add_item_flag = False
-                    for item in self.graph_widget.listDataItems():
-                        if item.name() == new_tag.name:
-                            add_item_flag = True
-                            item.setData([new_tag.x], [new_tag.y], pen=pg.mkPen(width=new_tag.width, color=new_tag.color), symbol='o', name=new_tag.name)
-                    if not add_item_flag:
-                        self.graph_widget.addItem(pg.ScatterPlotItem([new_tag.x], [new_tag.y], pen=pg.mkPen(width=new_tag.width, color=new_tag.color), symbol='o', name=new_tag.name))
+                    for log in self.zero_log:
+                        flag_cross_tag_name = False
+                        for tag in self.tags:
+                            if log[3] == tag.name: flag_cross_tag_name = True
+                        if not flag_cross_tag_name:
+                            new_tag = Tag(log[3], parameters.tag_color, parameters.tag_width, log[5], log[6], log[7])
+                            self.tags.append(new_tag)
 
-            for log in self.zero_log:
-                flag_cross_tag_name = False
-                for tag in self.tags:
-                    if log[3] == tag.name: flag_cross_tag_name = True
-                if not flag_cross_tag_name:
-                    new_tag = Tag(log[3], parameters.tag_color, parameters.tag_width, log[5], log[6], log[7])
-                    self.tags.append(new_tag)
+                    for log in self.log:
+                        for tag in self.tags:
+                            if log[3] == tag.name:
+                                tag.mas_x.append(float(log[5]))
+                                tag.mas_y.append(float(log[6]))
+                                tag.mas_z.append(float(log[7]))
+                                tag.mas_time.append(float(log[0]))
 
-            for log in self.log:
-                for tag in self.tags:
-                    if log[3] == tag.name:
-                        tag.mas_x.append(float(log[5]))
-                        tag.mas_y.append(float(log[6]))
-                        tag.mas_z.append(float(log[7]))
-                        tag.mas_time.append(float(log[0]))
+                    for tag in self.tags:
+                        if len(tag.mas_x) != 0:
+                            for i in range(len(tag.mas_x)):
+                                tag.mas_x_f.append(0)
+                                tag.mas_y_f.append(0)
+                                tag.mas_x_f[0] = tag.mas_x[0]
+                                tag.mas_y_f[0] = tag.mas_y[0]
 
-            for tag in self.tags:
-                if len(tag.mas_x) != 0:
-                    for i in range(len(tag.mas_x)):
-                        tag.mas_x_f.append(0)
-                        tag.mas_y_f.append(0)
-                        tag.mas_x_f[0] = tag.mas_x[0]
-                        tag.mas_y_f[0] = tag.mas_y[0]
+                    for log in self.zero_log:
+                        for tag in self.tags:
+                            if log[3] == tag.name:
+                                tag.mas_false_time.append(float(log[0]))
 
-            for log in self.zero_log:
-                for tag in self.tags:
-                    if log[3] == tag.name:
-                        tag.mas_false_time.append(float(log[0]))
+                    self.Filter()
 
-            self.Filter()
+                    for tag in self.tags:
+                        if len(tag.mas_time) != 0:
 
-            for tag in self.tags:
-                if len(tag.mas_time) != 0:
+                            add_item_flag = False
+                            for item in self.graph_widget.listDataItems():
+                                if item.name() == tag.name + "path":
+                                    item.setData(tag.mas_x_f, tag.mas_y_f, pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "path"))
+                                    add_item_flag = True
+                            if not add_item_flag:
+                                path = self.graph_widget.plot(tag.mas_x_f, tag.mas_y_f, pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "path"))
+                                path.setZValue(-1)
+                                path.hide()
 
-                    add_item_flag = False
-                    for item in self.graph_widget.listDataItems():
-                        if item.name() == tag.name + "path":
-                            item.setData(tag.mas_x_f, tag.mas_y_f, pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "path"))
-                            add_item_flag = True
-                    if not add_item_flag:
-                        path = self.graph_widget.plot(tag.mas_x_f, tag.mas_y_f, pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "path"))
-                        path.setZValue(-1)
-                        path.hide()
+                            for i in range(10):
+                                add_item_flag = False
+                                for item in self.graph_widget.listDataItems():
+                                    if item.name() == tag.name + "tail" + str(i):
+                                        item.setData([tag.x], [tag.y], pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "tail" + str(i)))
+                                        add_item_flag = True
+                                if not add_item_flag:
+                                    tail = pg.ScatterPlotItem([tag.x], [tag.y], pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "tail" + str(i)))
+                                    tail.hide()
+                                    self.graph_widget.addItem(tail)
+                            for i in range(tag.tail_length):
+                                for item in self.graph_widget.listDataItems():
+                                    if item.name() == tag.name + "tail" + str(i): item.show()
 
-                    for i in range(10):
-                        add_item_flag = False
-                        for item in self.graph_widget.listDataItems():
-                            if item.name() == tag.name + "tail" + str(i):
-                                item.setData([tag.x], [tag.y], pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "tail" + str(i)))
-                                add_item_flag = True
-                        if not add_item_flag:
-                            tail = pg.ScatterPlotItem([tag.x], [tag.y], pen=pg.mkPen(width=1, color=tag.color), name=(tag.name + "tail" + str(i)))
-                            tail.hide()
-                            self.graph_widget.addItem(tail)
-                    for i in range(tag.tail_length):
-                        for item in self.graph_widget.listDataItems():
-                            if item.name() == tag.name + "tail" + str(i): item.show()
+                    if len(self.log) != 0:
+                        self.current_time = float(self.log[0][0])
 
-            self.current_time = float(self.log[0][0])
+                    self.max_x = 0
+                    self.max_y = 0
+                    self.min_x = 0
+                    self.min_y = 0
+                    for log in self.log:
+                        if float(log[5]) > self.max_x: self.max_x = float(log[5])
+                        if float(log[6]) > self.max_y: self.max_y = float(log[6])
+                        if float(log[5]) < self.min_x: self.min_x = float(log[5])
+                        if float(log[5]) < self.min_y: self.min_y = float(log[5])
+                    self.graph_widget.setXRange(self.min_x, self.max_x)
+                    self.graph_widget.setYRange(self.min_y, self.max_y)
 
-            self.max_x = 0
-            self.max_y = 0
-            self.min_x = 0
-            self.min_y = 0
-            for log in self.log:
-                if float(log[5]) > self.max_x: self.max_x = float(log[5])
-                if float(log[6]) > self.max_y: self.max_y = float(log[6])
-                if float(log[5]) < self.min_x: self.min_x = float(log[5])
-                if float(log[5]) < self.min_y: self.min_y = float(log[5])
-            self.graph_widget.setXRange(self.min_x, self.max_x)
-            self.graph_widget.setYRange(self.min_y, self.max_y)
+                    self.table.setRowCount(len(self.tags))
+                    for i in range(len(self.tags)):
+                        self.table.setItem(i, 0, QTableWidgetItem(self.tags[i].name))
+                        self.table.setItem(i, 1, QTableWidgetItem(self.tags[i].color))
+                        self.table.item(i, 1).setBackground(QColor(self.tags[i].color))
+                        self.table.setItem(i, 2, QTableWidgetItem(self.tags[i].x))
+                        self.table.setItem(i, 3, QTableWidgetItem(self.tags[i].y))
 
-            self.table.setRowCount(len(self.tags))
-            for i in range(len(self.tags)):
-                self.table.setItem(i, 0, QTableWidgetItem(self.tags[i].name))
-                self.table.setItem(i, 1, QTableWidgetItem(self.tags[i].color))
-                self.table.item(i, 1).setBackground(QColor(self.tags[i].color))
-                self.table.setItem(i, 2, QTableWidgetItem(self.tags[i].x))
-                self.table.setItem(i, 3, QTableWidgetItem(self.tags[i].y))
+                        tag_width_slider = QSlider(Qt.Horizontal, self)
+                        tag_width_slider.valueChanged[int].connect(self.TagWidthSliderLogic)
+                        tag_width_slider.setValue(int(self.tags[i].width * 10))
+                        tag_width_slider.setStyleSheet("QSlider::handle:horizontal {background-color: dimgrey;}" "QSlider::handle:horizontal:pressed {background-color: black;}")
+                        self.tag_width_sliders.append(tag_width_slider)
+                        self.table.setCellWidget(i, 4, tag_width_slider)
 
-                tag_width_slider = QSlider(Qt.Horizontal, self)
-                tag_width_slider.valueChanged[int].connect(self.TagWidthSliderLogic)
-                tag_width_slider.setValue(int(self.tags[i].width * 10))
-                tag_width_slider.setStyleSheet("QSlider::handle:horizontal {background-color: dimgrey;}" "QSlider::handle:horizontal:pressed {background-color: black;}")
-                self.tag_width_sliders.append(tag_width_slider)
-                self.table.setCellWidget(i, 4, tag_width_slider)
+                        enable_disable_checkbox = QCheckBox("", self)
+                        enable_disable_checkbox.setChecked(True)
+                        enable_disable_checkbox.stateChanged.connect(self.EnableDisableCheckboxLogic)
+                        self.enable_disable_checkboxes.append(enable_disable_checkbox)
+                        self.table.setCellWidget(i, 5, enable_disable_checkbox)
 
-                enable_disable_checkbox = QCheckBox("", self)
-                enable_disable_checkbox.setChecked(True)
-                enable_disable_checkbox.stateChanged.connect(self.EnableDisableCheckboxLogic)
-                self.enable_disable_checkboxes.append(enable_disable_checkbox)
-                self.table.setCellWidget(i, 5, enable_disable_checkbox)
+                        tag_check_checkbox = QCheckBox("", self)
+                        tag_check_checkbox.stateChanged.connect(self.PathCheckboxLogic)
+                        self.tag_path_checkboxes.append(tag_check_checkbox)
+                        self.table.setCellWidget(i, 6, tag_check_checkbox)
 
-                tag_check_checkbox = QCheckBox("", self)
-                tag_check_checkbox.stateChanged.connect(self.PathCheckboxLogic)
-                self.tag_path_checkboxes.append(tag_check_checkbox)
-                self.table.setCellWidget(i, 6, tag_check_checkbox)
+                        time_tag_path_slider = QSlider(Qt.Horizontal, self)
+                        time_tag_path_slider.valueChanged[int].connect(self.TimePathSliderLogic)
+                        time_tag_path_slider.setValue(100)
+                        time_tag_path_slider.setStyleSheet("QSlider::handle:horizontal {background-color: dimgrey;}" "QSlider::handle:horizontal:pressed {background-color: black;}")
+                        self.time_tag_path_sliders.append(time_tag_path_slider)
+                        self.table.setCellWidget(i, 7, time_tag_path_slider)
 
-                time_tag_path_slider = QSlider(Qt.Horizontal, self)
-                time_tag_path_slider.valueChanged[int].connect(self.TimePathSliderLogic)
-                time_tag_path_slider.setValue(100)
-                time_tag_path_slider.setStyleSheet("QSlider::handle:horizontal {background-color: dimgrey;}" "QSlider::handle:horizontal:pressed {background-color: black;}")
-                self.time_tag_path_sliders.append(time_tag_path_slider)
-                self.table.setCellWidget(i, 7, time_tag_path_slider)
+                        tag_tail_length_slider = QSlider(Qt.Horizontal, self)
+                        tag_tail_length_slider.valueChanged[int].connect(self.TailLengthSliderLogic)
+                        tag_tail_length_slider.setValue(50)
+                        tag_tail_length_slider.setStyleSheet("QSlider::handle:horizontal {background-color: dimgrey;}" "QSlider::handle:horizontal:pressed {background-color: black;}")
+                        self.tag_tails_length_sliders.append(tag_tail_length_slider)
+                        self.table.setCellWidget(i, 8, tag_tail_length_slider)
 
-                tag_tail_length_slider = QSlider(Qt.Horizontal, self)
-                tag_tail_length_slider.valueChanged[int].connect(self.TailLengthSliderLogic)
-                tag_tail_length_slider.setValue(50)
-                tag_tail_length_slider.setStyleSheet("QSlider::handle:horizontal {background-color: dimgrey;}" "QSlider::handle:horizontal:pressed {background-color: black;}")
-                self.tag_tails_length_sliders.append(tag_tail_length_slider)
-                self.table.setCellWidget(i, 8, tag_tail_length_slider)
+                        self.table.setItem(i, 9, QTableWidgetItem(str(len(self.tags[i].mas_time) + len(self.tags[i].mas_false_time))))
+                        self.table.setItem(i, 10, QTableWidgetItem(str((round(len(self.tags[i].mas_time) / (len(self.tags[i].mas_time) + len(self.tags[i].mas_false_time)), 2) * 100)) + " %"))
 
-                self.table.setItem(i, 9, QTableWidgetItem(str(len(self.tags[i].mas_time) + len(self.tags[i].mas_false_time))))
-                self.table.setItem(i, 10, QTableWidgetItem(str((round(len(self.tags[i].mas_time) / (len(self.tags[i].mas_time) + len(self.tags[i].mas_false_time)), 2) * 100)) + " %"))
+                        self.table.resizeColumnsToContents()
+                        self.table.resizeRowsToContents()
 
-                self.table.resizeColumnsToContents()
-                self.table.resizeRowsToContents()
-
-            self.start_date_layot.setText(str(time.ctime(float(self.log[0][0]))))
-            self.current_date_layot.setText(str(time.ctime(float(self.log[0][0]))))
-            self.finish_date_layot.setText(str(time.ctime(float(self.log[len(self.log) - 1][0]))))
+                    if len(self.log) != 0:
+                        self.start_date_layot.setText(str(time.ctime(float(self.log[0][0]))))
+                        self.current_date_layot.setText(str(time.ctime(float(self.log[0][0]))))
+                        self.finish_date_layot.setText(str(time.ctime(float(self.log[len(self.log) - 1][0]))))
 
     def TailLengthSliderLogic(self, value):
         for i in range(len(self.tag_tails_length_sliders)):
@@ -828,18 +840,20 @@ class Window(QMainWindow):
 
     def MapLoad(self):
         filename, filetype = QFileDialog.getOpenFileName(self, "SELECT A MAP", ".", "Images files (*.png *.jpg *.jpeg)")
-        self.img = pg.ImageItem(np.flipud(np.array(Image.open(filename))).transpose([1, 0, 2]), name="map")
-        self.img.setRect(QRect(int(filename.split()[1]), int(filename.split()[2]), int(filename.split()[3]), int(filename.split()[4].split(".")[0])))
-        self.img.setZValue(-100)
-        self.graph_widget.addItem(self.img)
+        if filename:
+            self.img = pg.ImageItem(np.flipud(np.array(Image.open(filename))).transpose([1, 0, 2]), name="map")
+            self.img.setRect(QRect(int(filename.split()[1]), int(filename.split()[2]), int(filename.split()[3]), int(filename.split()[4].split(".")[0])))
+            self.img.setZValue(-100)
+            self.graph_widget.addItem(self.img)
 
     def MapDelete(self):
         self.graph_widget.removeItem(self.img)
 
     def ButtonPlayLogic(self):
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(lambda: self.Draw())
-        self.timer.start(1)
+        if len(self.log) != 0:
+            self.timer = QtCore.QTimer()
+            self.timer.timeout.connect(lambda: self.Draw())
+            self.timer.start(1)
 
     def Draw(self):
         if self.current_time >= float(self.log[self.count][0]):
@@ -871,8 +885,8 @@ class Window(QMainWindow):
                                     else: tail_width = int(tag.width - (i + 1))
                                     item.setData([str(tag.mas_x_f[current_step - (i + 1)])], [str(tag.mas_y_f[current_step - (i + 1)])], pen=pg.mkPen(width=tail_width, color=tag.color), symbol='o', name=(tag.name + "tail" + str(i)))
                     self.count += 1
-                    self.slider.setValue(int(self.count / len(self.log) * 100))
-                    if self.count == len(self.log): self.ButtonStopLogic()
+                    self.slider.setValue(int(self.count / len(self.log) * 1000))
+                    if self.count >= len(self.log): self.ButtonStopLogic()
                     break
 
         if self.flag_x1: self.current_time += 0.001
@@ -884,36 +898,38 @@ class Window(QMainWindow):
         self.current_date_layot.setText(str(time.ctime(float(self.current_time))))
 
     def ButtonPauseLogic(self):
-        self.timer.stop()
+        if len(self.log) != 0:
+            self.timer.stop()
 
     def ButtonStopLogic(self):
-        self.timer.stop()
-        self.count = 0
-        self.current_time = float(self.log[0][0])
-        self.slider.setValue(0)
-        self.current_date_layot.setText(str(time.ctime(float(self.log[0][0]))))
-        for tag in self.tags:
-            tag.x = tag.start_x
-            tag.y = tag.start_y
-            tag.z = tag.start_z
-            for i in range(len(self.tags)):
-                if self.tags[i].name == tag.name:
-                    self.table.setItem(i + 1, 2, QTableWidgetItem(self.tags[i].x))
-                    self.table.setItem(i + 1, 3, QTableWidgetItem(self.tags[i].y))
-                    self.table.resizeColumnsToContents()
-            for item in self.graph_widget.listDataItems():
-                if item.name() == tag.name:
-                    item.setData([tag.x], [tag.y],
-                                 pen=pg.mkPen(width=tag.width, color=tag.color),
-                                 symbol='h',
-                                 name=tag.name)
-            for i in range(tag.tail_length):
+        if len(self.log) != 0:
+            self.timer.stop()
+            self.count = 0
+            self.current_time = float(self.log[0][0])
+            self.slider.setValue(0)
+            self.current_date_layot.setText(str(time.ctime(float(self.log[0][0]))))
+            for tag in self.tags:
+                tag.x = tag.start_x
+                tag.y = tag.start_y
+                tag.z = tag.start_z
+                for i in range(len(self.tags)):
+                    if self.tags[i].name == tag.name:
+                        self.table.setItem(i + 1, 2, QTableWidgetItem(self.tags[i].x))
+                        self.table.setItem(i + 1, 3, QTableWidgetItem(self.tags[i].y))
+                        self.table.resizeColumnsToContents()
                 for item in self.graph_widget.listDataItems():
-                    if item.name() == tag.name + "tail" + str(i):
-                        if tag.width - (i + 1) <= 1: tail_width = 1
-                        else: tail_width = int(tag.width - (i + 1))
+                    if item.name() == tag.name:
                         item.setData([tag.x], [tag.y],
-                                     pen=pg.mkPen(width=tail_width, color=tag.color), symbol='o', name=(tag.name + "tail" + str(i)))
+                                     pen=pg.mkPen(width=tag.width, color=tag.color),
+                                     symbol='h',
+                                     name=tag.name)
+                for i in range(tag.tail_length):
+                    for item in self.graph_widget.listDataItems():
+                        if item.name() == tag.name + "tail" + str(i):
+                            if tag.width - (i + 1) <= 1: tail_width = 1
+                            else: tail_width = int(tag.width - (i + 1))
+                            item.setData([tag.x], [tag.y],
+                                         pen=pg.mkPen(width=tail_width, color=tag.color), symbol='o', name=(tag.name + "tail" + str(i)))
 
     def ChangeTagColor(self):
         for item in self.table.selectedItems():
