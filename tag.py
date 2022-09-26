@@ -19,3 +19,5 @@ class Tag:
         self.mas_x_f = []
         self.mas_y_f = []
 
+        self.log_for_beacons_mas = []
+

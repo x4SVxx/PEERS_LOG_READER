@@ -27,6 +27,15 @@ button_border_width = "1"
 button_border_color = "Black"
 button_border_radius = "3"
 
+button_targets_width = 75
+button_tartgets_height = 20
+
+button_beacons_width = 75
+button_beacons_height = 20
+
+target_select_menu_width = 150
+target_select_menu_height = 20
+
 tag_width = 5
 tag_color = "#ff0000"
 

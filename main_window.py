@@ -26,6 +26,10 @@ class Window(QMainWindow):
         self.more_log_flag = False
         self.input_start_flag = False
         self.slide_menu_bar = False
+        self.max_beacon_number = 0
+        self.log_for_beacons_mas = []
+        self.mas_time_for_beacon = []
+        self.current_text_combo_box = ""
 
         self.flag_x1 = True
         self.flag_x2 = False
@@ -37,6 +41,7 @@ class Window(QMainWindow):
         self.MainWindowGeometry()
         self.CreateMenuBar()
         self.CreateGraph()
+        self.ComboBoxForTargets()
         self.CreateButtons()
         self.CreateSlider()
         self.CreateDateLayot()
@@ -78,17 +83,47 @@ class Window(QMainWindow):
         self.map_menu.addAction(self.delete_map_action)
         self.delete_map_action.triggered.connect(lambda : self.MapDelete())
 
+    def ComboBoxForTargets(self):
+        self.combo_box = QtWidgets.QComboBox(self)
+        self.combo_box.setGeometry(0, 0, 0, 0)
+        self.combo_box.activated[str].connect(self.ComboBoxActivated)
+
+    def ComboBoxActivated(self):
+        self.current_text_combo_box = str(self.combo_box.currentText())
+
+        for tag in self.tags:
+            for i in range(self.max_beacon_number + 1):
+                for item in self.beacons_graph_widget.listDataItems():
+                    if item.name() == "beacon" + str(i) + str(tag.name): item.hide()
+
+        for tag in self.tags:
+            if tag.name == self.current_text_combo_box:
+                for i in range(self.max_beacon_number + 1):
+                    for item in self.beacons_graph_widget.listDataItems():
+                        if item.name() == "beacon" + str(i) + str(tag.name): item.show()
+
     def CreateGraph(self):
         self.graph_width = int(self.window_width / 100 * 57)
-        self.graph_height = int(self.window_height - parameters.offset_top - parameters.offset_bot - parameters.button_display_height - parameters.offset_after_graph - parameters.date_layot_height - parameters.offset_before_and_after_date_layot * 2)
+        self.graph_height = int(self.window_height - parameters.offset_top - parameters.offset_bot - parameters.button_display_height - parameters.offset_after_graph - parameters.date_layot_height - parameters.offset_before_and_after_date_layot * 2 - parameters.button_beacons_height)
         self.graph_widget = pg.PlotWidget(self)
         self.graph_widget.showGrid(x=True, y=True)
         self.graph_widget.setBackground("White")
-        self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top, self.graph_width, self.graph_height))
+        self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top + parameters.button_beacons_height, self.graph_width, self.graph_height))
         self.graph_widget.getAxis("bottom").setTickFont(QFont(parameters.axes_font, parameters.axes_font_size))
         self.graph_widget.getAxis("left").setTickFont(QFont(parameters.axes_font, parameters.axes_font_size))
         self.graph_widget.getAxis('bottom').setTextPen(pg.mkPen(color="Black", width=3))
         self.graph_widget.getAxis('left').setTextPen(pg.mkPen(color="Black", width=3))
+
+        self.beacons_graph_width = int(self.window_width - parameters.offset_left - parameters.offset_right)
+        self.beacons_graph_height = int(self.window_height - parameters.offset_bot - parameters.offset_top - parameters.button_beacons_height)
+        self.beacons_graph_widget = pg.PlotWidget(self)
+        self.beacons_graph_widget.showGrid(x=True, y=True)
+        self.beacons_graph_widget.setBackground("White")
+        self.beacons_graph_widget.setGeometry(QtCore.QRect(0, 0, 0, 0))
+        self.beacons_graph_widget.getAxis("bottom").setTickFont(QFont(parameters.axes_font, parameters.axes_font_size))
+        self.beacons_graph_widget.getAxis("left").setTickFont(QFont(parameters.axes_font, parameters.axes_font_size))
+        self.beacons_graph_widget.getAxis('bottom').setTextPen(pg.mkPen(color="Black", width=3))
+        self.beacons_graph_widget.getAxis('left').setTextPen(pg.mkPen(color="Black", width=3))
 
     def CreateButtons(self):
         self.button_play = QtWidgets.QPushButton(self)
@@ -221,7 +256,7 @@ class Window(QMainWindow):
         """--------------------------------------------------------------------------------------------------------------------------------------------------"""
         self.button_slide_tools = QtWidgets.QPushButton(self)
         self.button_slide_tools.setGeometry(parameters.offset_left + self.graph_width + 11,
-                                            parameters.offset_top,
+                                            parameters.offset_top + parameters.button_beacons_height,
                                             15,
                                             self.graph_height)
         self.button_slide_tools.setFont(QFont(parameters.button_font, 9))
@@ -232,6 +267,156 @@ class Window(QMainWindow):
                                                   "QPushButton { border: " + "1" + "px solid " + "Black" + " }"
                                                   "QPushButton { border-radius: " + "1" + "px }")
         self.button_slide_tools.clicked.connect(lambda: self.ButtonSlideMenuLogic())
+
+        """--------------------------------------------------------------------------------------------------------------------------------------------------"""
+        self.button_targets = QtWidgets.QPushButton(self)
+        self.button_targets.setGeometry(parameters.offset_left,
+                                        parameters.offset_top, parameters.button_targets_width, parameters.button_tartgets_height)
+        self.button_targets.setFont(QFont(parameters.button_font, 9))
+        self.button_targets.setText("TARGETS")
+        self.button_targets.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
+                                                  "QPushButton { background-color: silver }"
+                                                  "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
+                                                  "QPushButton { border: " + "1" + "px solid " + "Black" + " }"
+                                                  "QPushButton { border-radius: " + "1" + "px }")
+        self.button_targets.clicked.connect(lambda: self.ButtonTargetsLogic())
+        """--------------------------------------------------------------------------------------------------------------------------------------------------"""
+        self.button_beacons = QtWidgets.QPushButton(self)
+        self.button_beacons.setGeometry(parameters.offset_left + parameters.button_targets_width,
+                                            parameters.offset_top,
+                                            parameters.button_beacons_width,
+                                            parameters.button_beacons_height)
+        self.button_beacons.setFont(QFont(parameters.button_font, 9))
+        self.button_beacons.setText("BEACONS")
+        self.button_beacons.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
+                                                  "QPushButton { background-color: light grey }"
+                                                  "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
+                                                  "QPushButton { border: " + "1" + "px solid " + "Black" + " }"
+                                                  "QPushButton { border-radius: " + "1" + "px }")
+        self.button_beacons.clicked.connect(lambda: self.ButtonBeaconsLogic())
+
+    def ButtonTargetsLogic(self):
+        self.button_targets.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
+                                          "QPushButton { background-color: silver }"
+                                          "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
+                                          "QPushButton { border: " + "1" + "px solid " + "Black" + " }"
+                                          "QPushButton { border-radius: " + "1" + "px }")
+        self.button_beacons.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
+                                          "QPushButton { background-color: light grey }"
+                                          "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
+                                          "QPushButton { border: " + "1" + "px solid " + "Black" + " }"
+                                          "QPushButton { border-radius: " + "1" + "px }")
+
+        if self.slide_menu_bar:
+            self.table.setGeometry(0, 0, 0, 0)
+            self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top + parameters.button_beacons_height, self.window_width - parameters.offset_left - parameters.offset_right - 15 - 5, self.graph_height))
+            self.button_slide_tools.setGeometry(self.window_width - parameters.offset_right - 15,
+                                                parameters.offset_top + parameters.button_beacons_height,
+                                                15,
+                                                self.graph_height)
+            self.button_slide_tools.setText("<")
+        else:
+            self.table.setGeometry(parameters.offset_left + self.graph_width + parameters.offset_between_graph_and_table,
+                                   parameters.offset_top + parameters.button_beacons_height,
+                                   self.window_width - (parameters.offset_left + parameters.offset_right + parameters.offset_between_graph_and_table + self.graph_width),
+                                   self.graph_height)
+            self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top + parameters.button_beacons_height, self.graph_width, self.graph_height))
+            self.button_slide_tools.setGeometry(parameters.offset_left + self.graph_width + 11,
+                                                parameters.offset_top + parameters.button_beacons_height,
+                                                15,
+                                                self.graph_height)
+            self.button_slide_tools.setText(">")
+
+        self.button_1x.setGeometry(self.window_width - parameters.offset_right - parameters.button_display_width * 6 - parameters.offset_between_buttons_display * 5,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.button_2x.setGeometry(self.window_width - parameters.offset_right - parameters.button_display_width * 5 - parameters.offset_between_buttons_display * 4,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.button_5x.setGeometry(self.window_width - parameters.offset_right - parameters.button_display_width * 4 - parameters.offset_between_buttons_display * 3,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.button_10x.setGeometry(self.window_width - parameters.offset_right - parameters.button_display_width * 3 - parameters.offset_between_buttons_display * 2,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.button_50x.setGeometry(self.window_width - parameters.offset_right - parameters.button_display_width * 2 - parameters.offset_between_buttons_display,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.button_100x.setGeometry(self.window_width - parameters.offset_right - parameters.button_display_width,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.button_play.setGeometry(parameters.offset_left,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.button_pause.setGeometry(parameters.offset_left + parameters.button_display_width + parameters.offset_between_buttons_display,
+                                      self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                      parameters.button_display_width,
+                                      parameters.button_display_height)
+        self.button_stop.setGeometry(parameters.offset_left + parameters.button_display_width * 2 + parameters.offset_between_buttons_display * 2,
+                                     self.window_height - parameters.offset_bot - parameters.button_display_height,
+                                     parameters.button_display_width,
+                                     parameters.button_display_height)
+        self.slider.setGeometry(int(parameters.offset_left + parameters.button_display_width * 3 + parameters.offset_between_buttons_display * 3),
+                                int(self.window_height - parameters.offset_bot - parameters.button_display_height + (parameters.button_display_height - parameters.slider_height) / 2),
+                                int(self.window_width - (parameters.offset_left + parameters.offset_right + parameters.button_display_width * 9 + parameters.offset_between_buttons_display * 9)),
+                                int(parameters.slider_height))
+
+        self.start_date_layot.setGeometry(parameters.offset_left + parameters.button_display_width * 3 + parameters.offset_between_buttons_display * 3,
+                                            self.window_height - parameters.offset_bot - parameters.button_display_height - parameters.date_layot_height - parameters.offset_before_and_after_date_layot,
+                                            parameters.date_layot_width,
+                                            parameters.date_layot_height)
+
+        self.current_date_layot.setGeometry(int((self.window_width - parameters.offset_right - parameters.offset_left + parameters.button_display_width * 3 + parameters.offset_between_buttons_display * 3) / 2 - parameters.date_layot_width / 2),
+                                            self.window_height - parameters.offset_bot - parameters.button_display_height - parameters.date_layot_height - parameters.offset_before_and_after_date_layot,
+                                            parameters.date_layot_width,
+                                            parameters.date_layot_height)
+
+        self.finish_date_layot.setGeometry(self.window_width - parameters.offset_right - parameters.date_layot_width,
+                                            self.window_height - parameters.offset_bot - parameters.button_display_height - parameters.date_layot_height - parameters.offset_before_and_after_date_layot,
+                                            parameters.date_layot_width,
+                                            parameters.date_layot_height)
+
+        self.beacons_graph_widget.setGeometry(QtCore.QRect(0, 0, 0, 0))
+        self.combo_box.setGeometry(0, 0, 0, 0)
+
+    def ButtonBeaconsLogic(self):
+        self.button_targets.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
+                                          "QPushButton { background-color: light grey }"
+                                          "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
+                                          "QPushButton { border: " + "1" + "px solid " + "Black" + " }"
+                                          "QPushButton { border-radius: " + "1" + "px }")
+        self.button_beacons.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
+                                          "QPushButton { background-color: silver }"
+                                          "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
+                                          "QPushButton { border: " + "1" + "px solid " + "Black" + " }"
+                                          "QPushButton { border-radius: " + "1" + "px }")
+
+        self.table.setGeometry(0, 0, 0, 0)
+        self.graph_widget.setGeometry(QtCore.QRect(0, 0, 0, 0))
+        self.button_slide_tools.setGeometry(0, 0, 0, 0)
+        self.button_1x.setGeometry(0, 0, 0, 0)
+        self.button_2x.setGeometry(0, 0, 0, 0)
+        self.button_5x.setGeometry(0, 0, 0, 0)
+        self.button_10x.setGeometry(0, 0, 0, 0)
+        self.button_50x.setGeometry(0, 0, 0, 0)
+        self.button_100x.setGeometry(0, 0, 0, 0)
+        self.button_play.setGeometry(0, 0, 0, 0)
+        self.button_pause.setGeometry(0, 0, 0, 0)
+        self.button_stop.setGeometry(0, 0, 0, 0)
+        self.slider.setGeometry(0, 0, 0, 0)
+        self.start_date_layot.setGeometry(0, 0, 0, 0)
+        self.current_date_layot.setGeometry(0, 0, 0, 0)
+        self.finish_date_layot.setGeometry(0, 0, 0, 0)
+
+        self.beacons_graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top + parameters.button_beacons_height, self.beacons_graph_width, self.beacons_graph_height))
+        self.combo_box.setGeometry(parameters.offset_left + parameters.button_beacons_width + parameters.button_targets_width + 10, parameters.offset_top, parameters.target_select_menu_width, parameters.target_select_menu_height)
 
     def Button1xLogic(self):
         self.flag_x1 = True
@@ -463,21 +648,21 @@ class Window(QMainWindow):
     def ButtonSlideMenuLogic(self):
         if not self.slide_menu_bar:
             self.table.setGeometry(0, 0, 0, 0)
-            self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top, self.window_width - parameters.offset_left - parameters.offset_right - 15 - 5, self.graph_height))
+            self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top + parameters.button_beacons_height, self.window_width - parameters.offset_left - parameters.offset_right - 15 - 5, self.graph_height))
             self.button_slide_tools.setGeometry(self.window_width - parameters.offset_right - 15,
-                                                parameters.offset_top,
+                                                parameters.offset_top + parameters.button_beacons_height,
                                                 15,
                                                 self.graph_height)
             self.button_slide_tools.setText("<")
             self.slide_menu_bar = True
         else:
             self.table.setGeometry(parameters.offset_left + self.graph_width + parameters.offset_between_graph_and_table,
-                                   parameters.offset_top,
+                                   parameters.offset_top + parameters.button_beacons_height,
                                    self.window_width - (parameters.offset_left + parameters.offset_right + parameters.offset_between_graph_and_table + self.graph_width),
                                    self.graph_height)
-            self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top, self.graph_width, self.graph_height))
+            self.graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top + parameters.button_beacons_height, self.graph_width, self.graph_height))
             self.button_slide_tools.setGeometry(parameters.offset_left + self.graph_width + 11,
-                                                parameters.offset_top,
+                                                parameters.offset_top + parameters.button_beacons_height,
                                                 15,
                                                 self.graph_height)
             self.button_slide_tools.setText(">")
@@ -522,7 +707,7 @@ class Window(QMainWindow):
     def CreateTable(self):
         self.table = QTableWidget(self)
         self.table.setGeometry(parameters.offset_left + self.graph_width + parameters.offset_between_graph_and_table,
-                               parameters.offset_top,
+                               parameters.offset_top + parameters.button_beacons_height,
                                self.window_width - (parameters.offset_left + parameters.offset_right + parameters.offset_between_graph_and_table + self.graph_width),
                                self.graph_height)
         self.table.setFont(QFont(parameters.table_font, parameters.table_font_size))
@@ -639,6 +824,7 @@ class Window(QMainWindow):
                                 tag.mas_time.append(float(log[0]))
 
                     for tag in self.tags:
+                        self.combo_box.addItem(str(tag.name))
                         if len(tag.mas_x) != 0:
                             for i in range(len(tag.mas_x)):
                                 tag.mas_x_f.append(0)
@@ -682,6 +868,47 @@ class Window(QMainWindow):
 
                     if len(self.log) != 0:
                         self.current_time = float(self.log[0][0])
+
+                    for log in self.log:
+                        self.mas_time_for_beacon.append(float(log[0]))
+
+                    """-------------------------------------------------------------------------------------"""
+                    for log in self.log:
+                        for i in range(int(log[8])):
+                            if i % 2 != 0:
+                                if int(log[8 + i]) > self.max_beacon_number:
+                                    self.max_beacon_number = int(log[8 + i])
+
+                    for tag in self.tags:
+                        for i in range(self.max_beacon_number + 1):
+                            tag.log_for_beacons_mas.append([])
+
+                    count_log_for_beacon = 0
+                    for log in self.log:
+                        for tag in self.tags:
+                            if str(log[3]) == str(tag.name):
+                                for i in range(len(tag.log_for_beacons_mas)): tag.log_for_beacons_mas[i].append(float(0))
+                                for i in range(int(log[8])):
+                                    if i % 2 != 0:
+                                        for j in range(len(tag.log_for_beacons_mas)):
+                                            if j == int(log[8 + i]): tag.log_for_beacons_mas[j][count_log_for_beacon] = j
+                            else:
+                                for i in range(len(tag.log_for_beacons_mas)): tag.log_for_beacons_mas[i].append(float(0))
+                        count_log_for_beacon += 1
+
+                    for tag in self.tags:
+                        for i in range(self.max_beacon_number + 1):
+                            self.beacons_graph_widget.plot(self.mas_time_for_beacon, tag.log_for_beacons_mas[i], pen=pg.mkPen(width=0.5, color="White"), symbol="o",name=("beacon" + str(i) + str(tag.name)))
+                            for item in self.beacons_graph_widget.listDataItems():
+                                    if item.name() == "beacon" + str(i) + str(tag.name): item.hide()
+
+                    for tag in self.tags:
+                        if tag.name == self.combo_box.currentText():
+                            for i in range(self.max_beacon_number + 1):
+                                for item in self.beacons_graph_widget.listDataItems():
+                                    if item.name() == "beacon" + str(i) + str(tag.name): item.show()
+
+                    """-------------------------------------------------------------------------------------"""
 
                     self.max_x = 0
                     self.max_y = 0
