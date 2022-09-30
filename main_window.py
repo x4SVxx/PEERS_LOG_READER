@@ -42,6 +42,7 @@ class Window(QMainWindow):
         self.CreateMenuBar()
         self.CreateGraph()
         self.ComboBoxForTargets()
+        self.ComboBoxForBeacons()
         self.CreateButtons()
         self.CreateSlider()
         self.CreateDateLayot()
@@ -88,19 +89,49 @@ class Window(QMainWindow):
         self.combo_box.setGeometry(0, 0, 0, 0)
         self.combo_box.activated[str].connect(self.ComboBoxActivated)
 
-    def ComboBoxActivated(self):
-        self.current_text_combo_box = str(self.combo_box.currentText())
+    def ComboBoxForBeacons(self):
+        self.combo_box_beacons = QtWidgets.QComboBox(self)
+        self.combo_box_beacons.setGeometry(0, 0, 0, 0)
+        self.combo_box_beacons.activated[str].connect(self.ComboBoxActivatedBeacons)
 
+    def ComboBoxActivatedBeacons(self):
         for tag in self.tags:
             for i in range(self.max_beacon_number + 1):
                 for item in self.beacons_graph_widget.listDataItems():
-                    if item.name() == "beacon" + str(i) + str(tag.name): item.hide()
+                    if item.name() == "beacon" + str(i) + str(tag.name): self.beacons_graph_widget.removeItem(item)
+
+        x = []
+        for timme in self.mas_time_for_beacon:
+            a = str(time.ctime((float(timme))))
+            b = a.split()
+            c = b[3].split(":")
+            d = float(str(c[0]) + str(c[1]) + str(c[2]))
+            x.append(d)
 
         for tag in self.tags:
-            if tag.name == self.current_text_combo_box:
-                for i in range(self.max_beacon_number + 1):
-                    for item in self.beacons_graph_widget.listDataItems():
-                        if item.name() == "beacon" + str(i) + str(tag.name): item.show()
+            if tag.name == str(self.combo_box.currentText()):
+                self.beacons_graph_widget.plot(x, tag.log_for_beacons_mas[int(self.combo_box_beacons.currentText())],
+                                               pen=pg.mkPen(width=1, color="White"), symbol="s",
+                                               symbolSize=5, symbolBrush='Black',
+                                               name=("beacon" + str(int(self.combo_box_beacons.currentText())) + str(tag.name)))
+
+    def ComboBoxActivated(self):
+        for tag in self.tags:
+            for i in range(self.max_beacon_number + 1):
+                for item in self.beacons_graph_widget.listDataItems():
+                    if item.name() == "beacon" + str(i) + str(tag.name): self.beacons_graph_widget.removeItem(item)
+        x = []
+        for timme in self.mas_time_for_beacon:
+            a = str(time.ctime((float(timme))))
+            b = a.split()
+            c = b[3].split(":")
+            d = float(str(c[0]) + str(c[1]) + str(c[2]))
+            x.append(d)
+
+        for tag in self.tags:
+            if tag.name == str(self.combo_box.currentText()):
+                self.beacons_graph_widget.plot(x, tag.log_for_beacons_mas[int(self.combo_box_beacons.currentText())], pen=pg.mkPen(width=1, color="White"), symbol="s",
+                                               symbolSize=5, symbolBrush='Black', name=("beacon" + str(int(self.combo_box_beacons.currentText())) + str(tag.name)))
 
     def CreateGraph(self):
         self.graph_width = int(self.window_width / 100 * 57)
@@ -385,6 +416,7 @@ class Window(QMainWindow):
 
         self.beacons_graph_widget.setGeometry(QtCore.QRect(0, 0, 0, 0))
         self.combo_box.setGeometry(0, 0, 0, 0)
+        self.combo_box_beacons.setGeometry(0, 0, 0, 0)
 
     def ButtonBeaconsLogic(self):
         self.button_targets.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
@@ -417,6 +449,7 @@ class Window(QMainWindow):
 
         self.beacons_graph_widget.setGeometry(QtCore.QRect(parameters.offset_left, parameters.offset_top + parameters.button_beacons_height, self.beacons_graph_width, self.beacons_graph_height))
         self.combo_box.setGeometry(parameters.offset_left + parameters.button_beacons_width + parameters.button_targets_width + 10, parameters.offset_top, parameters.target_select_menu_width, parameters.target_select_menu_height)
+        self.combo_box_beacons.setGeometry(parameters.offset_left + parameters.button_beacons_width + parameters.button_targets_width + 10 + parameters.target_select_menu_width, parameters.offset_top, parameters.target_select_menu_width, parameters.target_select_menu_height)
 
     def Button1xLogic(self):
         self.flag_x1 = True
@@ -796,15 +829,6 @@ class Window(QMainWindow):
                         for i in range(len(log)):
                             self.log.append(log[i])
 
-                    # self.tag_width_sliders = []
-                    # self.enable_disable_checkboxes = []
-                    # self.tag_path_checkboxes = []
-                    # self.time_tag_path_sliders = []
-                    # self.tag_tails_length_sliders = []
-                    # self.tags = []
-                    # self.count = 0
-                    # self.slider.setValue(0)
-
         for log in self.log:
             flag_cross_tag_name = False
             for tag in self.tags:
@@ -888,8 +912,8 @@ class Window(QMainWindow):
 
         """-------------------------------------------------------------------------------------"""
         for log in self.log:
-            for i in range(int(log[8])):
-                if i % 2 != 0:
+            for i in range(int(log[8]) * 2): # Находим кол-во маяков, которые принималу участие в расчетах, * 2 т.к. после номмера маяка есть еще время приема
+                if i % 2 != 0: # Пропускаем времена и берем только номера маяков
                     if int(log[8 + i]) > self.max_beacon_number:
                         self.max_beacon_number = int(log[8 + i])
 
@@ -897,31 +921,31 @@ class Window(QMainWindow):
             for i in range(self.max_beacon_number + 1):
                 tag.log_for_beacons_mas.append([])
 
+        for i in range(self.max_beacon_number):
+            self.combo_box_beacons.addItem(str(i + 1))
+
         count_log_for_beacon = 0
         for log in self.log:
             for tag in self.tags:
+                for i in range(len(tag.log_for_beacons_mas)): tag.log_for_beacons_mas[i].append(float(0))
                 if str(log[3]) == str(tag.name):
-                    for i in range(len(tag.log_for_beacons_mas)): tag.log_for_beacons_mas[i].append(float(0))
-                    for i in range(int(log[8])):
+                    for i in range(int(log[8]) * 2):
                         if i % 2 != 0:
                             for j in range(len(tag.log_for_beacons_mas)):
                                 if j == int(log[8 + i]): tag.log_for_beacons_mas[j][count_log_for_beacon] = j
-                else:
-                    for i in range(len(tag.log_for_beacons_mas)): tag.log_for_beacons_mas[i].append(float(0))
             count_log_for_beacon += 1
 
-        for tag in self.tags:
-            for i in range(self.max_beacon_number + 1):
-                self.beacons_graph_widget.plot(self.mas_time_for_beacon, tag.log_for_beacons_mas[i], pen=pg.mkPen(width=0.5, color="White"), symbol="o",name=("beacon" + str(i) + str(tag.name)))
-                for item in self.beacons_graph_widget.listDataItems():
-                        if item.name() == "beacon" + str(i) + str(tag.name): item.hide()
+        x = []
+        for timme in self.mas_time_for_beacon:
+            a = str(time.ctime((float(timme))))
+            b = a.split()
+            c = b[3].split(":")
+            d = float(str(c[0]) + str(c[1]) + str(c[2]))
+            x.append(d)
 
         for tag in self.tags:
             if tag.name == self.combo_box.currentText():
-                for i in range(self.max_beacon_number + 1):
-                    for item in self.beacons_graph_widget.listDataItems():
-                        if item.name() == "beacon" + str(i) + str(tag.name): item.show()
-
+                self.beacons_graph_widget.plot(x, tag.log_for_beacons_mas[int(self.combo_box_beacons.currentText())], pen=pg.mkPen(width=1, color="White"), symbol="s", symbolSize=5, symbolBrush='Black', name=("beacon" + str(int(self.combo_box_beacons.currentText())) + str(tag.name)))
         """-------------------------------------------------------------------------------------"""
 
         self.max_x = 0
@@ -1059,25 +1083,25 @@ class Window(QMainWindow):
         for i in range(len(self.tag_width_sliders)):
             if self.tag_width_sliders[i].value() == value:
                 self.tags[i].width = value / 10
-                for tag in self.tags:
-                    current_step = 0
-                    for j in range(len(self.tags[i].mas_time)):
-                        if float(self.tags[i].current_time) == float(self.tags[i].mas_time[j]):
-                            current_step = j
 
-                    for item in self.graph_widget.listDataItems():
-                        if item.name() == tag.name: item.setData([tag.mas_x_f[current_step]], [tag.mas_y_f[current_step]], pen=pg.mkPen(width=tag.width, color=tag.color), symbol='o', name=tag.name)
+                current_step = 0
+                for j in range(len(self.tags[i].mas_time)):
+                    if float(self.tags[i].current_time) == float(self.tags[i].mas_time[j]):
+                        current_step = j
+
+                for item in self.graph_widget.listDataItems():
+                    if item.name() == self.tags[i]: item.setData([self.tags[i].mas_x_f[current_step]], [self.tags[i].mas_y_f[current_step]], pen=pg.mkPen(width=self.tags[i].width, color=self.tags[i].color), symbol='o', name=self.tags[i].name)
 
 
-                    if current_step > self.tags[i].tail_length:
-                        for j in range(self.tags[i].tail_length):
-                            for item in self.graph_widget.listDataItems():
-                                if item.name() == self.tags[i].name + "tail" + str(j):
-                                    if self.tags[i].width - (j + 1) <= 1: tail_width = 1
-                                    else: tail_width = int(self.tags[i].width - (j + 1))
-                                    item.setData([self.tags[i].mas_x_f[current_step - (j + 1)]], [self.tags[i].mas_y_f[current_step - (j + 1)]],
-                                                 pen=pg.mkPen(width=tail_width, color=self.tags[i].color), symbol='o',
-                                                 name=self.tags[i].name + "tail" + str(j))
+                if current_step > self.tags[i].tail_length:
+                    for j in range(self.tags[i].tail_length):
+                        for item in self.graph_widget.listDataItems():
+                            if item.name() == self.tags[i].name + "tail" + str(j):
+                                if self.tags[i].width - (j + 1) <= 1: tail_width = 1
+                                else: tail_width = int(self.tags[i].width - (j + 1))
+                                item.setData([self.tags[i].mas_x_f[current_step - (j + 1)]], [self.tags[i].mas_y_f[current_step - (j + 1)]],
+                                             pen=pg.mkPen(width=tail_width, color=self.tags[i].color), symbol='o',
+                                             name=self.tags[i].name + "tail" + str(j))
 
     def MapLoad(self):
         filename, filetype = QFileDialog.getOpenFileName(self, "SELECT A MAP", ".", "Images files (*.png *.jpg *.jpeg)")
