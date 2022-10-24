@@ -37,7 +37,7 @@ target_select_menu_width = 150
 target_select_menu_height = 20
 
 tag_width = 5
-tag_color = "#ff0000"
+tag_color = ["#ff0000", "#FF1493", "#FF4500", "#00BFFF", "##6B8E23", "#00FA9A", "#4B0082", "#A52A2A", "#000000", "#008000"]
 
 table_font = "Arial"
 table_header_font_size = 8

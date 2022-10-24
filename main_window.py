@@ -7,6 +7,7 @@ from tag import Tag
 import time
 from PIL import Image
 import numpy as np
+import random
 
 class Window(QMainWindow):
     def __init__(self):
@@ -57,6 +58,7 @@ class Window(QMainWindow):
         self.window_y = int(self.SCREEN_HEIGHT / 2 - self.window_height / 2)
         self.setGeometry(self.window_x, self.window_y, self.window_width, self.window_height)
         self.setStyleSheet("background-color: #F3F3F3")
+        self.setWindowTitle("PEERS LOGS ANALYSIS")
         # self.setWindowFlags(Qt.FramelessWindowHint)
 
     def CreateMenuBar(self):
@@ -64,23 +66,28 @@ class Window(QMainWindow):
         self.menu_bar.setGeometry(0, 0, self.window_width, parameters.menu_bar_height)
         self.menu_bar.setStyleSheet("QMenuBar { background-color: White }" "QMenuBar::item:selected { background-color: LightGrey }")
 
-        self.log_menu = QtWidgets.QMenu("Log", self)
+        # self.log_menu = QtWidgets.QMenu("Log", self)
+        self.log_menu = QtWidgets.QMenu("Лог", self)
         self.log_menu.setStyleSheet("QMenu { background-color: White }" "QMenu { color: Black }" "QMenu::item:selected { background-color: LightGrey }")
         self.menu_bar.addMenu(self.log_menu)
 
-        self.load_log_action = QAction("Load log", self)
+        # self.load_log_action = QAction("Load log", self)
+        self.load_log_action = QAction("Загрузить лог", self)
         self.log_menu.addAction(self.load_log_action)
         self.load_log_action.triggered.connect(lambda : self.LogLoad())
 
-        self.map_menu = QtWidgets.QMenu("Map", self)
+        # self.map_menu = QtWidgets.QMenu("Map", self)
+        self.map_menu = QtWidgets.QMenu("Карта", self)
         self.map_menu.setStyleSheet("QMenu { background-color: White }" "QMenu { color: Black }" "QMenu::item:selected { background-color: LightGrey }")
         self.menu_bar.addMenu(self.map_menu)
 
-        self.load_map_action = QAction("Load map", self)
+        # self.load_map_action = QAction("Load map", self)
+        self.load_map_action = QAction("Загрузить карту", self)
         self.map_menu.addAction(self.load_map_action)
         self.load_map_action.triggered.connect(lambda : self.MapLoad())
 
-        self.delete_map_action = QAction("Delete map", self)
+        # self.delete_map_action = QAction("Delete map", self)
+        self.delete_map_action = QAction("Удалить карту", self)
         self.map_menu.addAction(self.delete_map_action)
         self.delete_map_action.triggered.connect(lambda : self.MapDelete())
 
@@ -304,7 +311,8 @@ class Window(QMainWindow):
         self.button_targets.setGeometry(parameters.offset_left,
                                         parameters.offset_top, parameters.button_targets_width, parameters.button_tartgets_height)
         self.button_targets.setFont(QFont(parameters.button_font, 9))
-        self.button_targets.setText("TARGETS")
+        # self.button_targets.setText("TARGETS")
+        self.button_targets.setText("МЕТКИ")
         self.button_targets.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
                                                   "QPushButton { background-color: silver }"
                                                   "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
@@ -318,7 +326,8 @@ class Window(QMainWindow):
                                             parameters.button_beacons_width,
                                             parameters.button_beacons_height)
         self.button_beacons.setFont(QFont(parameters.button_font, 9))
-        self.button_beacons.setText("BEACONS")
+        # self.button_beacons.setText("BEACONS")
+        self.button_beacons.setText("МАЯКИ")
         self.button_beacons.setStyleSheet("QPushButton { color: " + parameters.button_text_color + " }"
                                                   "QPushButton { background-color: light grey }"
                                                   "QPushButton:pressed { background-color: " + parameters.button_press_background_color + " }"
@@ -748,7 +757,8 @@ class Window(QMainWindow):
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.table.verticalHeader().destroy()
         self.table.setColumnCount(11)
-        self.table.setHorizontalHeaderLabels(["NAME", "COLOR", "X", "Y", "WIDTH", "E/D", "PATH", "              PATH TIME              ", "TAIL", "LOGS", "%1/0"])
+        # self.table.setHorizontalHeaderLabels(["NAME", "COLOR", "X", "Y", "WIDTH", "E/D", "PATH", "              PATH TIME              ", "TAIL", "LOGS", "%1/0"])
+        self.table.setHorizontalHeaderLabels(["ИМЯ", "ЦВЕТ", "X", "Y", "РАЗМЕР", "ВКЛ/ВЫКЛ", "ТРАЕКТОРИЯ", "  ВРЕМЯ ТРАЕКТОРИИ  ", "СЛЕД", "ЛОГИ", "%1/0"])
         for i in range (11): self.table.horizontalHeaderItem(i).setFont(QFont(parameters.table_font, parameters.table_header_font_size))
         self.table.resizeColumnsToContents()
         self.table.resizeRowsToContents()
@@ -834,7 +844,7 @@ class Window(QMainWindow):
             for tag in self.tags:
                 if log[3] == tag.name: flag_cross_tag_name = True
             if not flag_cross_tag_name:
-                new_tag = Tag(log[3], parameters.tag_color, parameters.tag_width, log[5], log[6], log[7])
+                new_tag = Tag(log[3], random.choice(parameters.tag_color), parameters.tag_width, log[5], log[6], log[7])
                 self.tags.append(new_tag)
 
                 add_item_flag = False
@@ -850,7 +860,7 @@ class Window(QMainWindow):
             for tag in self.tags:
                 if log[3] == tag.name: flag_cross_tag_name = True
             if not flag_cross_tag_name:
-                new_tag = Tag(log[3], parameters.tag_color, parameters.tag_width, log[5], log[6], log[7])
+                new_tag = Tag(log[3], random.choice(parameters.tag_color), parameters.tag_width, log[5], log[6], log[7])
                 self.tags.append(new_tag)
 
         for log in self.log:
